@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from datetime import date
+from typing import Dict, Any
 
 class TRMDto(BaseModel):
     fecha_alta: date
@@ -7,5 +8,4 @@ class TRMDto(BaseModel):
     fecha_final: date
     id_dian: int
     dolar: float
-    dolar_hong_kong: float
-    reminbi: float
+    otras_cotizaciones: Dict[str, Any] 

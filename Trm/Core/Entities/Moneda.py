@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Date, Integer, Numeric, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, JSONB # Importamos JSONB
 from Infrastructure.DataAccess.Configurations.DatabaseConfig import Base
 
 class Moneda(Base):
@@ -16,5 +16,4 @@ class Moneda(Base):
     fecha_final = Column(Date, nullable=False)
     id_dian = Column(Integer, nullable=False, unique=True)
     dolar = Column(Numeric(19, 5), nullable=False)
-    dolar_hong_kong = Column(Numeric(19, 5), nullable=False)
-    reminbi = Column(Numeric(19, 5), nullable=False)
+    otras_cotizaciones = Column(JSONB, nullable=False) 

@@ -41,7 +41,7 @@ class GetMonedasQueryHandler:
                                         (M.fecha_alta <= query.fecha_final)
                 
                 repo_result = await repo.get_all(
-                    pagination=(query.page, query.page_size),
+                    pagination=(query.page, sys.maxsize),
                     filter_func=filter_func
                 )
                 
