@@ -1,5 +1,4 @@
 from pydantic import BaseModel
-from decimal import Decimal
 from datetime import date
 from uuid import UUID
 from typing import Dict, Any 
@@ -10,7 +9,7 @@ class MonedaDto(BaseModel):
     fecha_inicio: date
     fecha_final: date
     id_dian: int
-    dolar: Decimal
+    dolar: float
     otras_cotizaciones: Dict[str, Any] 
 
     class Config:
