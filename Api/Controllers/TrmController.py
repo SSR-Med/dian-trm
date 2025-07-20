@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, status
+from Api.Controllers.Examples.BadRequestExamples.BadRequestDateExample import BadRequestDateExample
 from Infrastructure.Dtos.QueryResponseDto import QueryResponseDto
 from Trm.Application.Dependencies import get_query_handler
 from Trm.Application.Queries.GetMonedasQuery import GetMonedasQuery
@@ -16,7 +17,13 @@ router = APIRouter(
     status_code=200,
     response_model=QueryResponseDto[MonedaDto],
     summary="Obtener TRM por fecha",
-    description="Obtiene la tasa de cambio del dólar y otras monedas por fecha, filtrando por rango de fechas."
+    description="Obtiene la tasa de cambio del dólar y otras monedas por fecha, filtrando por rango de fechas.",
+    responses = {
+        status.HTTP_400_BAD_REQUEST:{
+            "model": BadRequestDateExample,
+            "description": "Fechas inválidas proporcionadas en la solicitud (Bad Request)."
+        }
+    }
 )
 async def get_trm(
     query: GetMonedasQuery = Depends(),

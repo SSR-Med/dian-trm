@@ -2,7 +2,8 @@ from fastapi import FastAPI
 import uvicorn
 import os
 from dotenv import load_dotenv
-from Api.Controllers.TrmController import router as trm_router  
+from Api.Controllers.Filters.ExceptionFilter import register_custom_exception_handlers
+from Api.Controllers.TrmController import router as trm_router
 
 load_dotenv()  
 
@@ -11,6 +12,8 @@ app = FastAPI(
     description="Una API para la obtención y almacenamiento de los datos de la DIAN",
     version="1.0.0"
 )
+
+register_custom_exception_handlers(app) 
 
 app.include_router(trm_router)
 
