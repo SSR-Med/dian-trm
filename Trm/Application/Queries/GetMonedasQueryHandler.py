@@ -25,7 +25,7 @@ class GetMonedasQueryHandler:
                                         (M.fecha_alta <= query.fecha_final)
                 
                 repo_result = await repo.get_all(
-                    pagination=(query.page, sys.maxsize),
+                    pagination=(1, sys.maxsize),
                 )
                 
                 fechas_alta_database = {moneda.fecha_alta for moneda in repo_result["data"]}
