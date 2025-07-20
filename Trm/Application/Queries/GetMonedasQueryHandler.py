@@ -1,3 +1,4 @@
+import asyncio
 from datetime import timedelta, date
 from Infrastructure.DataAccess.Repository import Repository
 from Infrastructure.DataAccess.UnitOfWork import UnitOfWork
@@ -15,23 +16,6 @@ class GetMonedasQueryHandler:
         self.dian_service = dian_service
         self.moneda_mapper = moneda_mapper
         
-    def _get_all_fridays_in_range(self, start_date: date, end_date: date) -> set[date]:
-        if start_date > end_date:
-            return set()
-        
-        days_until_first_friday = (4 - start_date.weekday() + 7) % 7
-        first_friday = start_date + timedelta(days=days_until_first_friday)
-        
-        if first_friday > end_date:
-            return set()
-        
-        fridays = {
-            first_friday + timedelta(weeks=n)
-            for n in range(int((end_date - first_friday).days / 7) + 1)
-            if (first_friday + timedelta(weeks=n)) <= end_date
-        }
-        return fridays
-   
     async def handle(self, query: GetMonedasQuery) -> QueryResponseDto[MonedaDto]:
         async with self.uow as session:
             try:
@@ -42,18 +26,23 @@ class GetMonedasQueryHandler:
                 
                 repo_result = await repo.get_all(
                     pagination=(query.page, sys.maxsize),
-                    filter_func=filter_func
                 )
                 
                 fechas_alta_database = {moneda.fecha_alta for moneda in repo_result["data"]}
-                fechas_viernes = self._get_all_fridays_in_range(query.fecha_inicio, query.fecha_final)
+                fechas_interseccion = self._get_date_interection(query.fecha_inicio, query.fecha_final, fechas_alta_database)
 
-                fechas_interseccion = fechas_viernes.difference(fechas_alta_database)
-                
+                id_dian_database = {moneda.id_dian for moneda in repo_result["data"]}
+
                 if fechas_interseccion:
-                    trm_dtos = [await self.dian_service.obtener_datos_trm(fecha) for fecha in fechas_interseccion]
-                    monedas = [self.moneda_mapper.trm_dto_to_entity(trm_dto) for trm_dto in trm_dtos]
-                    await self.save_monedas(repo, monedas) 
+                    tareas = [self.dian_service.obtener_datos_trm(fecha) for fecha in fechas_interseccion]
+                    
+                    trm_dtos = await asyncio.gather(*tareas)
+                    monedas = [
+                        self.moneda_mapper.trm_dto_to_entity(trm_dto)
+                        for trm_dto in trm_dtos
+                        if self.moneda_mapper.trm_dto_to_entity(trm_dto).id_dian not in id_dian_database
+                    ]
+                    await self._save_monedas(repo, monedas) 
                     await repo.commit()
                 
                 repo_result = await repo.get_all(
@@ -76,5 +65,31 @@ class GetMonedasQueryHandler:
             except Exception as e:
                 raise
             
-    async def save_monedas(self, repo: 'Repository', monedas: list[Moneda]) -> None:
+    async def _save_monedas(self, repo: 'Repository', monedas: list[Moneda]) -> None:
         await repo.add_many(monedas)
+
+    def _get_all_fridays_in_range(self, start_date: date, end_date: date) -> set[date]:
+        if start_date > end_date:
+            return set()
+        
+        days_until_first_friday = (4 - start_date.weekday()) % 7
+        first_friday = start_date + timedelta(days=days_until_first_friday)
+        
+        if first_friday > end_date:
+            return set()
+        
+        fridays = {
+            first_friday + timedelta(weeks=n)
+            for n in range(int((end_date - first_friday).days / 7) + 1)
+            if (first_friday + timedelta(weeks=n)) <= end_date
+        }
+        return fridays
+
+    def _get_date_interection(self, start_date: date, end_date: date, database_dates: list[date]) -> set[date]:
+        fechas_viernes = self._get_all_fridays_in_range(start_date, end_date)
+
+        fechas_altas_lunes = {fecha - timedelta(days=fecha.isoweekday() - 1) for fecha in database_dates}
+        lunes_a_viernes = {viernes - timedelta(days=viernes.isoweekday() - 1): viernes for viernes in fechas_viernes}
+
+        lunes_interseccion = set(lunes_a_viernes.keys()).difference(fechas_altas_lunes)
+        return {lunes_a_viernes[lunes] for lunes in lunes_interseccion}
