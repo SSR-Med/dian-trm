@@ -31,8 +31,6 @@ class GetMonedasQueryHandler:
                 fechas_alta_database = {moneda.fecha_alta for moneda in repo_result["data"]}
                 fechas_interseccion = self._get_date_interection(query.fecha_inicio, query.fecha_final, fechas_alta_database)
 
-                id_dian_database = {moneda.id_dian for moneda in repo_result["data"]}
-
                 if fechas_interseccion:
                     tareas = [self.dian_service.obtener_datos_trm(fecha) for fecha in fechas_interseccion]
                     
@@ -40,7 +38,6 @@ class GetMonedasQueryHandler:
                     monedas = [
                         self.moneda_mapper.trm_dto_to_entity(trm_dto)
                         for trm_dto in trm_dtos
-                        if self.moneda_mapper.trm_dto_to_entity(trm_dto).id_dian not in id_dian_database
                     ]
                     await self._save_monedas(repo, monedas) 
                     await repo.commit()

@@ -1,5 +1,5 @@
 from datetime import date, datetime, timedelta
-import requests
+import aiohttp
 from bs4 import BeautifulSoup
 from typing import Optional, Dict, Any
 from Infrastructure.Dtos.TRMDto import TRMDto
@@ -22,9 +22,8 @@ class DianService:
         max_attempts_without_finding_date = 5
         
         while True:
-            soup = self._get_page_soup(id_dian)
+            soup = await self._get_page_soup(id_dian)
             fecha_expedicion = self._extract_date_from_label(soup, "Fecha Expedición:")
-            # Imprimir fecha y ID DIAN para depuración
             
             if fecha_expedicion is None:
                 attempt_count += 1
@@ -72,12 +71,14 @@ class DianService:
             raise ValueError(f"ID calculado ({id_calculado}) no puede ser menor a 1. La fecha está demasiado lejos en el pasado.")
         return id_calculado
 
-    def _get_page_soup(self, id_dian: int) -> BeautifulSoup:
+    async def _get_page_soup(self, id_dian: int) -> BeautifulSoup:
         url = self.base_url.format(id_dian=id_dian)
-        response = requests.get(url)
-        if response.status_code != 200:
-            raise ValueError(f"No se pudo acceder a la página con ID {id_dian}. Estado: {response.status_code}")
-        return BeautifulSoup(response.content, 'html.parser')
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                if response.status != 200:
+                    raise ValueError(f"No se pudo acceder a la página con ID {id_dian}. Estado: {response.status}")
+                content = await response.text()
+                return BeautifulSoup(content, 'html.parser')
     
     def _extract_date_from_label(self, soup: BeautifulSoup, label_text: str) -> Optional[date]:
         label = self._find_element_by_text_case_insensitive(soup, 'label', label_text)
